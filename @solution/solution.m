@@ -40,6 +40,9 @@ classdef solution < handle
                     error('You must input a cell vector of ions.')
                 end
                 if isvector(concentrations) && length(ions)==length(concentrations)
+					if iscell(concentrations)
+						concentrations=cell2mat(concentrations)
+					end
 					obj.concentrations=concentrations;
                 else
                     error('The concentrations vector must be the same size as the ions vector.')
