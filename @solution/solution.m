@@ -1,5 +1,7 @@
 classdef solution < handle
     % A for a solution containing one or more ions.
+	% Upon initialization, immediately determines the pH and ionic strength of the solution. 
+	% Contains methods for simulation important solution properties. 
     
     properties(Constant = true, GetAccess = 'private')
         F=9.65E4;           % Faraday's const.[C/mol]
@@ -18,7 +20,7 @@ classdef solution < handle
         ions;
         concentrations;
         pH;
-        % cond;
+        % cond; % conductivity is no longer a static object property.
 		I=0;
     end
     
@@ -26,11 +28,16 @@ classdef solution < handle
         
         function obj=solution(ions, concentrations)
 			%Class Constructor
+
             if(nargin == 2)
+				if ~iscell(ions)
+					ions=num2cell(ions);
+				end
+				
                 if isvector(ions) && all(strcmp(cellfun(@class, ions, 'UniformOutput', false), 'ion'))
                     obj.ions=ions;
                 else
-                    error('You must input a vector of ions.')
+                    error('You must input a cell vector of ions.')
                 end
                 if isvector(concentrations) && length(ions)==length(concentrations)
 					obj.concentrations=concentrations;
@@ -39,7 +46,7 @@ classdef solution < handle
                 end
                 
             else
-                error('Solutions must have a cell of ions and a cell of concentrations.')
+                error('Solutions must have a cell of ions and a cell or vector of concentrations.')
             end
             
             obj.pH=get_pH(obj);
