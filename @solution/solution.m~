@@ -1,0 +1,181 @@
+classdef solution < handle
+    % A for a solution containing one or more ions.
+    
+    properties(Constant = true, GetAccess = 'private')
+        F=9.65E4;           % Faraday's const.[C/mol]
+        Rmu=8.31;           % Universal gas const. [J/mol*K]
+        Temp=298;           % Temperature [K]
+        Kw=1E-14;           % Water equilibrium constant
+        muH=362E-9%/obj.F;   % Mobility of Hydronium   % [m^2/s*V]/F --> [mol*s/Kg]
+        muOH=205E-9%/obj.F;  % Mobility of Hydroxide   % [m^2/s*V]/F --> [mol*s/Kg]
+        Lpm3=1000;          % Liters per meter^3
+        visc=1E-3;          % Dynamic viscosity (water) [Pa s]
+    end
+    
+    properties
+        ions;
+        concentrations;
+        pH;
+        cond;
+    end
+    
+
+    
+    methods
+        
+        function obj=solution(ions, concentrations)
+            if(nargin == 2)
+                if isvector(ions) && all(strcmp(cellfun(@class, ions, 'UniformOutput', false), 'ion'))
+                    obj.ions=ions;
+                else
+                    error('You must input a vector of ions.')
+                end
+                if isvector(concentrations) && length(ions)==length(concentrations)
+                    obj.concentrations=num2cell(concentrations,1);
+                else
+                    error('The concentrations vector must be the same size as the ions vector.')
+                end
+                
+            else
+                error('Solutions must have a cell of ions and a cell of concentrations.')
+            end
+            
+            obj.pH=get_pH(obj);
+            obj.cond=get_conductivity(obj);
+        end
+        
+        function pH=get_pH(obj)
+            cMat=cell2mat(obj.concentrations);
+            
+            MaxCol=-inf;
+            for i=1:length(obj.concentrations)
+                MaxCol=max(MaxCol, max(obj.ions{i}.z)-min(obj.ions{i}.z)+1);
+            end
+            
+            LMat=zeros(length(obj.concentrations),MaxCol);
+            
+            for i=1:length(obj.concentrations)
+                L_list=obj.ions{i}.get_L;
+                Ip1=find(obj.ions{i}.z==1);     Im1=find(obj.ions{i}.z==-1);
+                L_list=[L_list(1:Im1),1,L_list(Ip1:end)];
+                LMat(i,1:length(obj.ions{i}.z)+1)=L_list;
+            end
+            
+        
+            %%%
+            %Construct Q (done)
+            %%%
+            
+            Q1=1;
+            for j=1:size(LMat,1)
+                Q1=conv(Q1,LMat(j,:));
+            end %for j
+            Q2=[-obj.Kw 0 1];
+            Q=conv(Q1,Q2);
+            
+            
+            %%%
+            %Construct P (done)
+            %%%
+%             PMat=zeros(obj.concentrations, 1)
+            for i=1:length(obj.concentrations)
+                z_list=obj.ions{i}.z;
+                Ip1=find(obj.ions{i}.z==1);     Im1=find(obj.ions{i}.z==-1);
+                z_list=[z_list(1:Im1),0,z_list(Ip1:end)];
+                
+                tmp=zeros(1,size(LMat,2));
+                tmp(1:length(z_list))=z_list;
+                Mmod=LMat;     Mmod(i,:)=Mmod(i,:).*tmp;
+
+                Pi=1;
+                for kl=1:size(Mmod,1)
+                    Pi=conv(Pi,Mmod(kl,:));
+                end %for j
+                
+                Pi=conv([0 1],Pi);  % Convolve with P2
+                PMat(i,:)=Pi;
+            end %for i
+            
+            
+            %%%
+            %Pad Smaller Matrix (should work?)
+            %%%
+            
+            SizeDiff=size(Q,2)-size(PMat,2);
+            if SizeDiff>0
+                PMat=[PMat,repmat(PMat(:,1)*0,1,SizeDiff)];
+            elseif SizeDiff<0
+                Q=[Q,repmat(0,1,SizeDiff)];
+            end
+            
+            
+         
+            %%%
+            %Construct Polynomial (not done)
+            %%%
+%           cTot=cMat/met2lit;   % convert back to mol/liter
+            cTotRep=cMat'*ones(1,size(PMat,2));
+
+            P=sum(cTotRep.*PMat,1);
+            
+            Poly=zeros(1,max(length(P), length(Q)));
+            Poly(1:length(P))=Poly(1:length(P))+P;
+            Poly(1:length(Q))=Poly(1:length(Q))+Q; %from QMat
+            
+            Poly=fliplr(Poly);
+            
+            %%%
+            % Solve Polynomial for concentration (should work)
+            %%%
+            roo=roots(Poly);
+            cH=roo(imag(roo)==0 & roo>0);
+            pH=-log10(cH);
+        end
+        
+        function cond=get_conductivity(obj)
+            %Calculates the conductivity of the solution. Does not
+            %currently include the conductivity contribution of protons or
+            %hydroxyls. 
+            cond=0;
+            for i=1:length(obj.concentrations)
+                cond=cond+obj.ions{i}.molar_conductivity(obj.pH)*obj.concentrations{i};
+            end
+            cond=cond+obj.F*obj.muH*10^(-obj.pH)*obj.Lpm3; % H+ conductivity
+            cond=cond+obj.F*obj.muOH*(obj.Kw/10^(-obj.pH))*obj.Lpm3; % H+ conductivity
+        end
+        
+        function T=get_transference(obj)
+            %Gets the fraction of charge carried by each of the ions.
+            %Should not precisely add to 1, because some charge is carried
+            %by protons and hydroxyls. 
+            T=zeros(1,length(obj.ions));
+            for i=1:length(T)
+                T(i)=obj.ions{i}.molar_conductivity(obj.pH).*obj.concentrations{i};
+            end
+            T=T/obj.cond;
+        end
+        
+        function Qi=passage_charge(obj, LE)
+            Qi=0;
+        end
+        
+        function I=ionic_strength(obj)
+            %Calculates the ionic strength of the solution. This function
+            %does not account for changes in activity due to ionic strength
+            %effects. 
+            I=0;
+            for i=1:length(obj.ions);
+                I=I+obj.concentrations{i}*sum((single(obj.ions{i}.z).^2).*obj.ions{i}.ionization_fraction(obj.pH));
+            end
+            I=I/2;
+        end
+        
+        function Qi=zone_transfer(obj, vol)
+            %Calculates the zone transfer charge of the solution at a given
+            %volume. 
+            Qi=0;
+            Qi=obj.concentrations.*obj
+        end
+        
+    end
+end
