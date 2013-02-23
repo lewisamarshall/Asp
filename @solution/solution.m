@@ -135,10 +135,8 @@ classdef solution < handle
                 L_list=[L_list(1:Im1),1,L_list(Ip1:end)];
                 LMat(i,1:length(obj.ions{i}.z)+1)=L_list;
             end
-            
-        
-            % Construct Q 
-			% Made more consice by removing Q1 and Q2.  
+                    
+            % Construct Q vector.
 			Q=1;
 			% Convolve each line of the L matrix. 
             for j=1:size(LMat,1)
@@ -147,10 +145,7 @@ classdef solution < handle
 			%Convolve with water dissociation.
 			Q=conv(Q, [-obj.Kw_eff(I) 0 1]);
 
-            %%%
-            %Construct P (done)
-            %%%
-%             PMat=zeros(obj.concentrations, 1)
+            %Construct P matrix
             for i=1:length(obj.concentrations)
                 z_list=obj.ions{i}.get_z0;
                 
@@ -168,10 +163,7 @@ classdef solution < handle
             end %for i
             
             
-            %%%
-            %Pad Smaller Matrix
-            %%%
-            
+            %Pad whichever is smaller, P or Q            
             SizeDiff=size(Q,2)-size(PMat,2);
             if SizeDiff>0
                 PMat=[PMat,repmat(PMat(:,1)*0,1,SizeDiff)];
@@ -179,11 +171,9 @@ classdef solution < handle
                 Q=[Q,repmat(0,1,SizeDiff)];
             end
                  
-         
-            %%%
-            %Construct Polynomial
-            %%%
-            cTotRep=obj.concentrations'*ones(1,size(PMat,2));
+        	% Construct Polynomial
+			% rewrite using repmat
+            cTotRep=(obj.concentrations)'*ones(1,size(PMat,2));
 
             P=sum(cTotRep.*PMat,1);
             
@@ -201,50 +191,97 @@ classdef solution < handle
             pH=-log10(cH);
         end
 		
-		function [pH, I]=find_equilibrium(obj)
-			% Uses the fzero root finder to find the equilibrium
-			% pH and ionic strength of a solution, using the ionic-
-			% strength-adjusted activity coefficients.
-			
-			I=obj.calc_I(obj.calc_pH);
-			I=fzero(@(x)equil_offset(obj, x), I);
-			pH=obj.calc_pH(I);
-		end
-        
 		function Residual=equil_offset(obj,I_i)
-			% This function finds the offset between proposed
-			% pH and I and the pH and I calculated from the initial guess.
+			% EQUIL_OFFSET finds the error in the ionic strength.
+			%	Takes an ionic strength, then uses it to calculate
+			%	a new ionic strenght using the new equilibrum coefficents. 
+			%	FIND_EQUILIBRIUM finds the root of this function.
 			pH=obj.calc_pH(I_i);
 			I_f=obj.calc_I(pH, I_i);
 			
 			Residual=(I_f-I_i);
 		end
 		
-        function cond=cond(obj)
-            %Calculates the conductivity of the solution. Does not
-            %currently include the conductivity contribution of protons or
-            %hydroxyls. 
-            cond=0;
+		function [pH, I]=find_equilibrium(obj)
+			% FIND_EQUILIBRIUM finds the equilibrium ionic strength and pH. 
+			%	It uses the fzero root finder to find the equilibrium
+			% 	pH and ionic strength of a solution, using the ionic-
+			% 	strength-adjusted activity coefficients. This function
+			%	is called when the object is initialized.
+			
+			% Generate an initial ionic strength guess without using activity corrections
+			I=obj.calc_I(obj.calc_pH);
+			% Iterate to find the true ionic strength.
+			I=fzero(@(x)equil_offset(obj, x), I);
+			% Use this final ionic strength to find the correct pH. 
+			pH=obj.calc_pH(I);
+		end
+		
+		function H_conductivity=H_conductivity(obj)
+			% Calculates teh conductivity of H+.
+			% Does not correct the mobility of the ion.
+			obj.F*obj.muH*obj.cH*obj.Lpm3
+		end
+		
+		function OH_conductivity=OH_conductivity(obj)
+			% Calculates teh conductivity of OH+.
+			% Does not correct the mobility of the ion.
+			obj.F*obj.muOH*obj.cOH*obj.Lpm3
+		end
+		
+		function Kw_eff=Kw_eff(obj, I)
+			% Gets the effective water dissociation constant
+			% due to activity corrections to H+ and OH-. 
+			if ~exist('I', 'var')
+				I=obj.I;
+			end
+			
+			% There are two coefficients that are used repeatedly.
+			% Specified in Bahga. 
+			A=obj.Adh*sqrt(I)/(1+obj.aD*sqrt(I));
+			B=0.1*I;
+			
+			% Use them to calculate the activity coefficients. 
+			% These coefficients are for z=+-1, for H+ and OH-
+			gam_h=B-A;
+			gam_h=10^gam_h;
+			Kw_eff=obj.Kw/gam_h^2;
+		end
+		
+		function cH=cH(obj)
+			% Supplies the concentration of H+ in the solution. 
+			cH=10^(-obj.pH);
+		end
+		
+		function cOH=cOH(obj)
+			% Supplies the concentration of OH- in the solution. 
+			cOH=obj.Kw_eff/obj.cH;
+		end
+		
+        function conductivity=conductivity(obj)
+            % CONDUCTIVITY calcualtes the electrical conductivity of the solution. 
+			%	Relies on molar conductivity calculations from ion and total conductivity 
+			%	of H+ and OH-. 
+			
+            conductivity=0;
             for i=1:length(obj.concentrations)
-                cond=cond+obj.ions{i}.molar_conductivity(obj.pH)*obj.concentrations(i);
+                conductivity=conductivity+...
+					obj.ions{i}.molar_conductivity(obj.pH, obj.I) * obj.concentrations(i);
             end
-            cond=cond+obj.F*obj.muH*obj.cH*obj.Lpm3; % H+ conductivity
-            cond=cond+obj.F*obj.muOH*obj.cOH*obj.Lpm3; % H+ conductivity
+			
+            conductivity=conductivity + obj.OH_conductivity; 	% Add contribution for hydroxyl conductivity
+            conductivity=conductivity + obj.H_conductivity;		% Add contribution for hydronium conductivity
         end
         
-        function T=get_transference(obj)
-            %Gets the fraction of charge carried by each of the ions.
-            %Should not precisely add to 1, because some charge is carried
-            %by protons and hydroxyls. 
+        function T=transference(obj)
+            %TRANSFERENCE Gets the fraction of charge carried by each of the ions.
+            %	Should not precisely add to 1, because some charge is carried
+            %	by protons and hydroxyls. 
             T=zeros(1,length(obj.ions));
             for i=1:length(T)
-                T(i)=obj.ions{i}.molar_conductivity(obj.pH).*obj.concentrations(i);
+                T(i)=obj.ions{i}.molar_conductivity(obj.pH, obj.I).*obj.concentrations(i);
             end
-            T=T/obj.cond;
-        end
-        
-        function Qi=passage_charge(obj, LE)
-            Qi=0;
+            T=T/obj.conductivity;
         end
 		        
         function Qi=zone_transfer(obj, vol)
@@ -254,9 +291,17 @@ classdef solution < handle
         end
 
 		function Cb=buffering_capacity(obj)
+			% BUFFERING_CAPACITY finds the buffering capacity of a solution. 
+			%	This function generates an exact solution to the buffering
+			%	capacity by finding the derivative of the pH with respect to
+			%	the addition of an acid.
+			
+			% Find the smallest concentration in the solution. 
 			c=obj.concentrations(obj.concentrations>0);
 			c=0.01*min(c);
-			new_sol=obj.add_ion(ion('A-', -1, -2, -1), c);
+			% Add an acid insult at 1% the lowest concentration in the solution.
+			new_sol=obj.add_ion(ion('Acid Insult', -1, -2, -1), c);
+			% Find the slope of the pH. 
 			Cb=abs(c/(obj.pH-new_sol.pH));
 		end
 		
@@ -321,44 +366,6 @@ classdef solution < handle
 			
 		end
 		
-		function Kw_eff=Kw_eff(obj, I)
-			% Gets the effective water dissociation constant
-			% due to activity corrections to H+ and OH-. 
-			if ~exist('I', 'var')
-				I=obj.I;
-			end
-			
-			% There are two coefficients that are used repeatedly.
-			% Specified in Bahga. 
-			A=obj.Adh*sqrt(I)/(1+obj.aD*sqrt(I));
-			B=0.1*I;
-			
-			% Use them to calculate the activity coefficients. 
-			% These coefficients are for z=+-1, for H+ and OH-
-			gam_h=B-A;
-			gam_h=10^gam_h;
-			Kw_eff=obj.Kw/gam_h^2;
-		end
-		
-		function cH=cH(obj)
-			% Supplies the concentration of H+ in the solution. 
-			cH=10^(-obj.pH);
-		end
-		
-		function cOH=cOH(obj)
-			% Supplies the concentration of OH- in the solution. 
-			cOH=obj.Kw_eff/obj.cH;
-		end
-			
         
     end %End methods section
 end %End class definition
-
-% Outdated code.
-
-% Q1=1;
-% for j=1:size(LMat,1)
-%     Q1=conv(Q1,LMat(j,:));
-% end %for j
-% Q2=[-obj.Kw_eff(I) 0 1];
-% Q=conv(Q1,Q2);
