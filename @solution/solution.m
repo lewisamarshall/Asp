@@ -65,10 +65,14 @@ classdef solution < handle
                 error('Solutions must have a cell of ions and a cell or vector of concentrations.')
             end
             
-			[obj.pH, obj.I]=obj.find_equilibrium;
-			
-            obj.pH=calc_pH(obj);
-			obj.I=obj.calc_I(obj, obj.pH);
+			try
+				[obj.pH, obj.I]=obj.find_equilibrium;
+			catch
+				warning('Could not find equilibrium with ionic strength corrections. Returning uncorrected pH and I. ')
+	            obj.pH=obj.calc_pH;
+				obj.I=obj.calc_I(obj.pH);
+			end
+
         end
 
 		function new_solution=add_ion(obj, new_ions, new_concentrations)
@@ -89,7 +93,7 @@ classdef solution < handle
 			if ~exist('I_guess', 'var')
 				I_guess=0;
 			end
-			
+
 			% Set the ionic strength to zero to start with. It will be counted for each ion.
 			I=0; 
 			
@@ -99,7 +103,7 @@ classdef solution < handle
         	end
 			
 			% Add the ionic strength due to water dissociation. 
-			I=I+obj.cH + obj.cOH;
+			I=I+obj.cH(pH) + obj.cOH(pH, I_guess);
 			% Divide by 2 to get the correct value. 
         	I=I/2;
         end
@@ -212,7 +216,15 @@ classdef solution < handle
 			% Generate an initial ionic strength guess without using activity corrections
 			I=obj.calc_I(obj.calc_pH);
 			% Iterate to find the true ionic strength.
-			I=fzero(@(x)equil_offset(obj, x), I);
+			
+			OPTION=optimset('TolX', 1e-4);
+			[I,fval,exitflag]=fzero(@obj.equil_offset, I, OPTION);
+			fval
+			obj.equil_offset(I)
+			I
+			if exitflag~=1
+				error('Could not find equilibrium.')
+			end
 			% Use this final ionic strength to find the correct pH. 
 			pH=obj.calc_pH(I);
 		end
@@ -248,14 +260,25 @@ classdef solution < handle
 			Kw_eff=obj.Kw/gam_h^2;
 		end
 		
-		function cH=cH(obj)
-			% Supplies the concentration of H+ in the solution. 
-			cH=10^(-obj.pH);
+		function cH=cH(obj, pH)
+			% Supplies the concentration of H+ in the solution.
+			if  ~exist('pH', 'var')
+				pH=obj.pH;
+			end
+			
+			cH=10^(-pH);
 		end
 		
-		function cOH=cOH(obj)
+		function cOH=cOH(obj, pH, I)
 			% Supplies the concentration of OH- in the solution. 
-			cOH=obj.Kw_eff/obj.cH;
+			if  ~exist('pH', 'var')
+				pH=obj.pH;
+			end
+			if  ~exist('I', 'var')
+				pH=obj.I;
+			end
+			
+			cOH=obj.Kw_eff(I)/obj.cH(pH);
 		end
 		
         function conductivity=conductivity(obj)
