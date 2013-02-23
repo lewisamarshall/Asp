@@ -6,6 +6,7 @@ classdef ion < handle
 	% The ion is defined by a name, and a set of charge states (z).
 	% Each charge state must have an associated acidity constant (pKa).
 	% Each charge state must have an associated fully ionized mobility (fi_mobility).
+	
     properties
         name;
         z=0;
@@ -298,16 +299,3 @@ classdef ion < handle
     end %End of Methods
     
 end %End of Object
-
-
-% Devalued Methods:
-
-%function obj=add_state(obj, new_z, new_pKa, new_fi_mobility)
-% %This function is used to add a new charge state to an existing ion. 
-% %It is rarely used...Devalued for now.
-% 
-%             obj.z=[obj.z, new_z];
-%             obj.pKa=[obj.pKa, new_pKa];
-%             obj.fi_mobility=[obj.fi_mobility, new_fi_mobility];
-%             obj=obj.z_sort();
-%end
