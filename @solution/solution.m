@@ -1,27 +1,34 @@
 classdef solution < handle
-    % A for a solution containing one or more ions.
-	% Upon initialization, immediately determines the pH and ionic strength of the solution. 
-	% Contains methods for simulation important solution properties. 
+    % SOLUTION	Create a  SOLUTION object.
+	%
+	% 	SOLUTION(IONS, CONCENTRATIONS) is an object representing aqueous solution
+	% 		containing the ions in IONS at the concentrations specified in CONCENTRATIONS. 
+	%	
+	%	When a new solution is initialized, it will immediately calculate the equilibrium
+	%		state, including the pH and the ionic strength (I) of the solution. These
+	%		values willl be stored as permenant attributes of the object. Other solution 
+	%		properties can be calculated by invoking the appropriate method. 
+	%	
+	% 	See also ion.
     
     properties(Constant = true, GetAccess = 'private')
-        F=9.65E4;           % Faraday's const.[C/mol]
-        Rmu=8.31;           % Universal gas const. [J/mol*K]
-        Temp=298;           % Temperature [K]
-        Kw=1E-14;           % Water equilibrium constant
-        muH=362E-9%/obj.F;   % Mobility of Hydronium   % [m^2/s*V]/F --> [mol*s/Kg]
-        muOH=205E-9%/obj.F;  % Mobility of Hydroxide   % [m^2/s*V]/F --> [mol*s/Kg]
-        Lpm3=1000;          % Liters per meter^3
-        visc=1E-3;          % Dynamic viscosity (water) [Pa s]
+        F=9.65E4;           % Faraday's const.				[C/mol]
+        Rmu=8.31;           % Universal gas const. 			[J/mol*K]
+        Temp=298;           % Temperature 					[K]
+        Kw=1E-14;           % Water equilibrium constant	[mol^2]
+        muH=362E-9;   		% Mobility of Hydronium 		[m^2/s*V]
+        muOH=205E-9; 		% Mobility of Hydroxide 		[m^2/s*V]
+        Lpm3=1000;          % Liters per meter^3			[]
+        visc=1E-3;          % Dynamic viscosity (water) 	[Pa s]
 		Adh=0.512; 			% L^1/2 / mol^1/2, approximate for room temperature
 		aD=1.5*sqrt(2); 	% mol^-1/2 mol^-3/2, approximation
     end
     
     properties
-        ions;
-        concentrations;
-        pH;
-        % cond; % conductivity is no longer a static object property.
-		I=0;
+        ions;				% Must be a cell of ion objects from the Asp class. 
+        concentrations=0; 	% A vector of concentrations in molar.
+        pH=7;				% Normal pH units. 
+		I=0; 				% Expected in molar. 
     end
     
     methods
@@ -30,16 +37,23 @@ classdef solution < handle
 			%Class Constructor
 
             if(nargin == 2)
+				% If the object is not a cell, try to force it to be a cell array. 
+				% This may be the case when there is only one ion. 
 				if ~iscell(ions)
 					ions=num2cell(ions);
 				end
 				
+				% Check that all of the objects in IONS are in the ion class. 
                 if isvector(ions) && all(strcmp(cellfun(@class, ions, 'UniformOutput', false), 'ion'))
                     obj.ions=ions;
                 else
-                    error('You must input a cell vector of ions.')
+                    error('You must input a cell vector of ion objects. Use "help ion" for more information.')
                 end
-                if isvector(concentrations) && length(ions)==length(concentrations)
+				
+				% Check that CONCENTRATIONS is a numeric vector of the same length as IONS.
+				% Also check that all of the concentrations are positive. 
+                if isvector(concentrations) && length(ions)==length(concentrations) && isnumeric(concentrations) && all(concentrations>=0)
+					% If the concentration is put in as a cell, change it to a vector. 
 					if iscell(concentrations)
 						concentrations=cell2mat(concentrations)
 					end
@@ -47,33 +61,62 @@ classdef solution < handle
                 else
                     error('The concentrations vector must be the same size as the ions vector.')
                 end
-                
-            else
+            else % If the solution isn't specified with two arguments, throw an error. 
                 error('Solutions must have a cell of ions and a cell or vector of concentrations.')
             end
             
-            obj.pH=get_pH(obj);
-            % obj.cond=get_conductivity(obj);
-			obj.I=ionic_strength(obj, obj.pH);
+			[obj.pH, obj.I]=obj.find_equilibrium;
+			
+            obj.pH=calc_pH(obj);
+			obj.I=obj.calc_I(obj, obj.pH);
         end
 
-		function new_sol=add_ion(obj, new_ion, new_conc)
-			new_sol=solution(cat(2, obj.ions, {new_ion}), cat(2, obj.concentrations, new_conc));
+		function new_solution=add_ion(obj, new_ions, new_concentrations)
+			% ADD_ION initializes a new solution with more ions.
+			%	NEW_SOLUTION will contain all of the ions in the current solution
+			%	plus a new set of ions from NEW_IONS at a new set of concentrations 
+			%	from NEW_CONCENTRATIONS.
+			new_solution=solution(cat(2, obj.ions, {new_ions}), cat(2, obj.concentrations, new_concentrations));
 		end
-        
-        function pH=get_pH(obj, I)
-			% Finds the pH of the object. If an ionic strength is specified, 
-			% uses the corrected acidity constants. 
+		
+        function I=calc_I(obj, pH, I_guess)
+            % CALC_I calculates the ionic strength of a solution. 
+			% 	CALC_I should only be used during solution initialization, 
+			% 	after that, the equilibrium ionic strength is stored in obj.I. 
+			%	pH must be supplied. If a guess for ionic strength is not supplied,
+			%	ionic strength corrections will not be used. 
 			
-			% If ionic strength does not exist, assume it is zero.
-			% This function is used to find the equilibrium state, 
-			% so it cannot pull the ionic strength from the object.
+			if ~exist('I_guess', 'var')
+				I_guess=0;
+			end
+			
+			% Set the ionic strength to zero to start with. It will be counted for each ion.
+			I=0; 
+			
+			% For each ion, add the contribution to ionic strength to the sum.
+        	for i=1:length(obj.ions);
+        		I=I+obj.concentrations(i)*sum(((obj.ions{i}.z).^2).*obj.ions{i}.ionization_fraction(pH, I_guess));
+        	end
+			
+			% Add the ionic strength due to water dissociation. 
+			I=I+obj.cH + obj.cOH;
+			% Divide by 2 to get the correct value. 
+        	I=I/2;
+        end
+        
+        function pH=calc_pH(obj, I)
+			% CALC_pH Finds the pH of the object. 
+			%	If an ionic strength is specified, uses the corrected acidity constants. 
+			%
+			%	This function should be used only when finding the equilibrium state. 
+			%	After that, the value should be pulled from obj.pH. 
+			%
+			% 	If ionic strength does not exist, assume it is zero.
+			% 	This function is used to find the equilibrium state, 
+			% 	so it cannot pull the ionic strength from the object.
 			if ~exist('I', 'var')
 				I=0; 
 			end
-			
-			%Set up concentration vector
-            cMat=obj.concentrations;
 			
 			% Find the order of the polynomial. This is the maximum
 			% size of the list of charge states in an ion. 
@@ -84,9 +127,9 @@ classdef solution < handle
             
 			% Set up the matrix of Ls, the multiplication
 			% of acidity coefficients for each ion.
-            LMat=zeros(length(cMat),MaxCol);
+            LMat=zeros(length(obj.concentrations),MaxCol);
             
-            for i=1:length(cMat)
+            for i=1:length(obj.concentrations)
                 L_list=obj.ions{i}.get_L(I);
                 Ip1=find(obj.ions{i}.z==1);     Im1=find(obj.ions{i}.z==-1);
                 L_list=[L_list(1:Im1),1,L_list(Ip1:end)];
@@ -103,10 +146,7 @@ classdef solution < handle
             end %for j
 			%Convolve with water dissociation.
 			Q=conv(Q, [-obj.Kw_eff(I) 0 1]);
-			
-			
-            
-            
+
             %%%
             %Construct P (done)
             %%%
@@ -143,7 +183,7 @@ classdef solution < handle
             %%%
             %Construct Polynomial
             %%%
-            cTotRep=cMat'*ones(1,size(PMat,2));
+            cTotRep=obj.concentrations'*ones(1,size(PMat,2));
 
             P=sum(cTotRep.*PMat,1);
             
@@ -166,16 +206,16 @@ classdef solution < handle
 			% pH and ionic strength of a solution, using the ionic-
 			% strength-adjusted activity coefficients.
 			
-			I=obj.ionic_strength(obj.get_pH);
+			I=obj.calc_I(obj.calc_pH);
 			I=fzero(@(x)equil_offset(obj, x), I);
-			pH=obj.get_pH(I);
+			pH=obj.calc_pH(I);
 		end
         
 		function Residual=equil_offset(obj,I_i)
 			% This function finds the offset between proposed
 			% pH and I and the pH and I calculated from the initial guess.
-			pH=obj.get_pH(I_i);
-			I_f=obj.ionic_strength(pH, I_i);
+			pH=obj.calc_pH(I_i);
+			I_f=obj.calc_I(pH, I_i);
 			
 			Residual=(I_f-I_i);
 		end
@@ -205,35 +245,6 @@ classdef solution < handle
         
         function Qi=passage_charge(obj, LE)
             Qi=0;
-        end
-        
-        function I=ionic_strength(obj, pH, I_guess)
-            % Calculates the ionic strength of the solution. This function
-            % does not account for changes in activity due to ionic strength
-            % effects. 
-			
-			% If a pH is not specified in the function call, use the pH
-			% of the object.
-			if ~exist('pH', 'var')
-				pH=obj.pH;
-			end
-			
-			if ~exist('I_guess', 'var') %calculate without an initial guess for ionic strength
-            	I=0;
-            	for i=1:length(obj.ions);
-            		I=I+obj.concentrations(i)*sum((double(obj.ions{i}.z).^2).*obj.ions{i}.ionization_fraction(pH));
-            	end
-				% Add the ionic strength due to water dissociation. 
-				I=I+obj.cH + obj.cOH;
-            	I=I/2;
-			else
-            	I=0;
-            	for i=1:length(obj.ions);
-            		I=I+obj.concentrations(i)*sum((double(obj.ions{i}.z).^2).*obj.ions{i}.ionization_fraction(obj.pH, I_guess));
-            	end
-				I=I+obj.cH + obj.cOH;
-            	I=I/2;
-			end
         end
 		        
         function Qi=zone_transfer(obj, vol)
@@ -278,7 +289,7 @@ classdef solution < handle
 
     
 			% mu is the (chemical?) potential of each ion.
-			mu=conc_list.*z_list.^2./obj.ionic_strength/2; %total potential
+			mu=conc_list.*z_list.^2./obj.I/2; %total potential
 			
 			
 			for j=1:n_states
@@ -304,7 +315,7 @@ classdef solution < handle
 
 		    factor=c*r';
 			factor=factor';
-		    mob_new=obj.F*omega-(obj.F*0.78420*z_list.*factor.*omega+31.410e-9).*sqrt(obj.ionic_strength)./(1+1.5*sqrt(obj.ionic_strength));
+		    mob_new=obj.F*omega-(obj.F*0.78420*z_list.*factor.*omega+31.410e-9).*sqrt(obj.I)./(1+1.5*sqrt(obj.I));
 			mob_new=(mob_new.*z_list)';
 			
 			
