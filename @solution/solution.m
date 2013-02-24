@@ -131,13 +131,10 @@ classdef solution < handle
             
 			% Set up the matrix of Ls, the multiplication
 			% of acidity coefficients for each ion.
-            LMat=zeros(length(obj.concentrations),MaxCol);
+            LMat=zeros(length(obj.ions),MaxCol);
             
-            for i=1:length(obj.concentrations)
-                L_list=obj.ions{i}.get_L(I);
-                Ip1=find(obj.ions{i}.z==1);     Im1=find(obj.ions{i}.z==-1);
-                L_list=[L_list(1:Im1),1,L_list(Ip1:end)];
-                LMat(i,1:length(obj.ions{i}.z)+1)=L_list;
+            for i=1:length(obj.ions)
+                LMat(i,1:length(obj.ions{i}.z)+1)=obj.ions{i}.L(I);
             end
                     
             % Construct Q vector.
@@ -151,7 +148,7 @@ classdef solution < handle
 
             %Construct P matrix
             for i=1:length(obj.concentrations)
-                z_list=obj.ions{i}.get_z0;
+                z_list=obj.ions{i}.z0;
                 
                 tmp=zeros(1,size(LMat,2));
                 tmp(1:length(z_list))=z_list;
@@ -219,9 +216,7 @@ classdef solution < handle
 			
 			OPTION=optimset('TolX', 1e-4);
 			[I,fval,exitflag]=fzero(@obj.equil_offset, I, OPTION);
-			fval
-			obj.equil_offset(I)
-			I
+
 			if exitflag~=1
 				error('Could not find equilibrium.')
 			end
@@ -232,13 +227,13 @@ classdef solution < handle
 		function H_conductivity=H_conductivity(obj)
 			% Calculates teh conductivity of H+.
 			% Does not correct the mobility of the ion.
-			obj.F*obj.muH*obj.cH*obj.Lpm3
+			H_conductivity=obj.F*obj.muH*obj.cH*obj.Lpm3;
 		end
 		
 		function OH_conductivity=OH_conductivity(obj)
 			% Calculates teh conductivity of OH+.
 			% Does not correct the mobility of the ion.
-			obj.F*obj.muOH*obj.cOH*obj.Lpm3
+			OH_conductivity=obj.F*obj.muOH*obj.cOH*obj.Lpm3;
 		end
 		
 		function Kw_eff=Kw_eff(obj, I)
@@ -275,7 +270,7 @@ classdef solution < handle
 				pH=obj.pH;
 			end
 			if  ~exist('I', 'var')
-				pH=obj.I;
+				I=obj.I;
 			end
 			
 			cOH=obj.Kw_eff(I)/obj.cH(pH);
@@ -321,7 +316,7 @@ classdef solution < handle
 			
 			% Find the smallest concentration in the solution. 
 			c=obj.concentrations(obj.concentrations>0);
-			c=0.01*min(c);
+			c=0.1*min(c);
 			% Add an acid insult at 1% the lowest concentration in the solution.
 			new_sol=obj.add_ion(ion('Acid Insult', -1, -2, -1), c);
 			% Find the slope of the pH. 
