@@ -1,4 +1,4 @@
-classdef ion < handle
+classdef ion
 	% A class for ions dissolved in solution. 
     % Draws significantly on Bagha Electrophoresis 2010
 	% "Ionic strength effects on electrophoretic focusing and separations"
@@ -12,6 +12,7 @@ classdef ion < handle
         z=0;
         pKa;
         fi_mobility; %Expected in m^2/V/s.  
+		fi_mobility_effective; %Intended to be filled by the solution class.
     end
     
 	% Properties only accessible by the funciton itself. 
