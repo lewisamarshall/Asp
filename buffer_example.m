@@ -3,10 +3,10 @@
 TRIS=ion('Tris', 1, 8.076, 29.5e-9);
 CL=ion('Chloride', -1, -2, -79.1e-9);
 
-BUFFER=solution({TRIS, CL}, [.1, .05]);
-BUFFER.buffering_capacity
-BUFFER.ionic_strength
-BUFFER.cond
+BUFFER=solution({TRIS, CL}, [1, .5])
+conductivity=BUFFER.conductivity
+buffering_capacity=BUFFER.buffering_capacity
+transference_numbers=BUFFER.transference
 
 %From Peakmaster, w/o Ionic Strength Correction
 % Ionic strength = 50.001 mM
