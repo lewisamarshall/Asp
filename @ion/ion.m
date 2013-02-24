@@ -41,7 +41,7 @@ classdef ion
                 end
 				
                 % Check that z is a vector of integers
-                if z==int8(z) & isvector(z)
+                if z==int8(z) && isvector(z)
                     obj.z=double(z);
                 else
                     error('Charge states must be a vector of integers.')
@@ -77,121 +77,6 @@ classdef ion
             % After storing the ion properties, ensure that the properties are sorted in order of charge. 
 			% All other ion methods assume that the states will be sorted by charge. 
             obj=obj.z_sort(); 
-        end
-		
-		function L=L(obj, I)
-			% L products of acidity constants, for use in the pH calculating routine.
-			% It can use ionic strength correction if an ionic strength is specified. Otherwise. It uses 
-			% uncorrected acidity coefficients. 
-			
-			L=obj.z0;
-			
-			if ~exist('I', 'var')
-				I=0;
-			end
-			
-			Ka=obj.Ka_eff(I);
-			
-			index_0=find(L==0);
-			L(index_0)=1;
-			
-			if index_0~=1
-				for i=(index_0-1):1
-					L(i)= L(i+1)*Ka(i);
-				end
-			end
-			
-			if index_0~=length(L)
-				for i=(index_0+1):length(L)
-					L(i)= L(i-1)/Ka(i-1);
-				end
-			end
-			
-		end
-        
-        function i_frac=ionization_fraction(obj, pH, I ,index)
-        	% This function takes the ion and the pH and the ionic strength. 
-			% It computes the fraction of ion in each of the ionization z states
-			% in z. If index is specified, it will only return the ionization 
-			% in ionization state z(index). 
-			
-			% If ionic strength is not specified, set it to zero. 
-			if ~exist('I', 'var')
-				I=0;
-			end
-			
-			% Sanitize the pH input. 
-			if ~isnumeric(pH)
-				error('pH should be a number.')
-			end
-			
-			if length(pH)~=1
-				pH=pH(1); 
-				warning('Ionization fraction only takes a single pH. Using pH(1).')
-			end
-			
-			% Get the vector of products of acidity constants.
-            L=obj.L(I);
-			% Compute the concentration of H+ from the pH.
-            cH=10.^(-pH)';
-            
-			% Calculate the denominator of the function for ionization fraction.
-            i_frac_denom=sum(L.*bsxfun(@power, cH, obj.z0),2);
-            
-			%Calculate the vector of ionization fractions
-            i_frac=L.*bsxfun(@power,  ...
-            cH, obj.z)./i_frac_denom;
-			i_frac=i_frac(obj.z0~=0);
-			% If index is specified, return only the ionization fraction of z(i).
-			if exist('index', 'var')
-				try
-					i_frac=i_frac(index);
-				catch
-					% Send a warning if the index is meaningless. 
-					% Still return the vector. 
-					warning('Specified index is out of bounds.')
-				end
-			end
-        end
-        
-        function m_cond=molar_conductivity(obj, pH, I)
-            % This function takes the ion and the pH and computes the molar
-            % conductivity. This function can take an ionic strength. 
-			% Provides conducitivity in Siemens per meter per mole.
-			
-			%%%%%%%%%%%%%%%%
-			% Does not yet use the ionic strength corrected mobilities.
-			%%%%%%%%%%%%%%%%
-            
-			if ~exist('I', 'var')
-				I=0;
-			end
-			
-            i_frac=ionization_fraction(obj, pH, I);
-            
-            m_cond=sum(obj.F*obj.z.*i_frac.*obj.fi_mobility*obj.Lpm3);
-            
-        end
-        
-        function eff_mobility=effective_mobility(obj, pH, I)
-            % This function takes the ion and a pH and an ionic strength. It calls the ionization
-            % fraction function and uses this information to compute the
-            % effective mobility of the ion. 
-			
-			%%%%%%%%%
-			% This function uses ionic strength for ionization fraction 
-			% calculation, but it does not use it for fi_mobility.
-			%%%%%%%%%
-			
-			if ~exist('I', 'var')
-				I=0;
-			end
-			
-            for i = 1:length(pH)
-                i_frac=ionization_fraction(obj, pH(i), I);
-                eff_mobility(i)=sum(i_frac.*obj.fi_mobility);
-            end
-			
         end
         
         function obj=z_sort(obj)
@@ -233,72 +118,6 @@ classdef ion
 			
 			z0=[0, obj.z];
 			z0=sort(z0);
-		end
-
-		function Ka_eff=Ka_eff(obj, I)
-			% Uses the ionic strength correction function from
-			% Dubye-Huckle theory to calculate the activity coefficients, 
-			% and from this, compute the effective Ka values for the ion. 
-			
-			% If the ionic strength is zero, simply return the Ka's. 
-			if I==0;
-				Ka_eff=obj.Ka; 
-				return
-			end
-			
-			% Store the Ka values, rather than continually recalculating them.
-			Ka=obj.Ka;
-			% Make the effective Ka vector the same size as the Ka vector.
-			Ka_eff=Ka;
-			
-			% Call the list of charge states, including 0. 
-			% This is required b/c you need the activity of the uncharged species.
-            z_list=obj.z0;
-			 
-			% There are two coefficients that are used repeatedly.
-			% Specified in Bahga. 
-			A=obj.Adh*sqrt(I)/(1+obj.aD*sqrt(I));
-			B=0.1*I;
-			
-			% Calculate (the log of) the activity coefficients. 
-			% First, the H+,
-			gam_h=B-A;
-			% then the ion states.
-			gam_i=z_list.^2*(B-A);
-			
-			% Convert both to actual activity coefficients.
-			gam_h=10^gam_h;
-			gam_i=10.^gam_i;
-			
-			% For each acidity coefficient, get the effective 
-			% coefficienty by multiplying by activities.
-			for i=1:length(Ka_eff)
-				Ka_eff(i)=Ka(i)*gam_i(i+1)/gam_i(i)/gam_h;
-			end
-
-		end
-		
-		function fi_mobility_effective=get_fi_mobility_effective(obj, I)
-			% If only an ionic strength is specified, use the Robinson-Stokes 
-			% correction to calculate a new fully ionized mobility. 
-			
-			% If a solution object is supplied, use the full onsager fouss correction. 
-			
-			if isnumeric(I) && I>=0
-				% Robinson-Stokes correction. Currently using the ionic strength where Bahga 2010
-				% uses twice the ionic strength. This appears to work, and follows the SPRESSO implimentation. 
-				% Likely typo in paper. 
-				A=0.2297;
-				B=31.410e-9;
-				fi_mobility_effective=obj.fi_mobility-(A.*obj.fi_mobility+B.*sign(obj.z))*sqrt(I)/(1+1.5*sqrt(I));
-				
-			elseif strcmp(class(I), 'solution')
-				TMP=I.add_ion(obj, 0);
-				fi_mobility_effective=TMP.get_factor;
-				fi_mobility_effective=fi_mobility_effective(end-length(obj.z)+1:end);
-			else
-				error('Ionic strength must be specified as either a positive scalar value or a solution object.')
-			end
 		end
 		
     end %End of Methods
