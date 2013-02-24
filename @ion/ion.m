@@ -136,11 +136,12 @@ classdef ion
             cH=10.^(-pH)';
             
 			% Calculate the denominator of the function for ionization fraction.
-            i_frac_denom=1+sum(L.*bsxfun(@power, cH, obj.z),2);
+            i_frac_denom=sum(L.*bsxfun(@power, cH, obj.z0),2);
             
 			%Calculate the vector of ionization fractions
-            i_frac=L.*bsxfun(@power, cH, obj.z)./i_frac_denom;
-			
+            i_frac=L.*bsxfun(@power,  ...
+            cH, obj.z)./i_frac_denom;
+			i_frac=i_frac(obj.z0~=0);
 			% If index is specified, return only the ionization fraction of z(i).
 			if exist('index', 'var')
 				try
