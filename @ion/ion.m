@@ -78,32 +78,35 @@ classdef ion < handle
             obj=obj.z_sort(); 
         end
 		
-        function L=get_L(obj, I)
-			% Creates a vector of the products of acidity constants, for use in the pH calculating routine.
+		function L=L(obj, I)
+			% L products of acidity constants, for use in the pH calculating routine.
 			% It can use ionic strength correction if an ionic strength is specified. Otherwise. It uses 
 			% uncorrected acidity coefficients. 
 			
-			%%%%%%%%%%%%%%%%%%
-			%This could be rewritten to use the z0 method. 
-			%%%%%%%%%%%%%%%%%%
-			
-            L=zeros(size(obj.pKa));
+			L=obj.z0;
 			
 			if ~exist('I', 'var')
-				Ka=obj.Ka;
-			else
-				Ka=obj.get_Ka_eff(I);
+				I=0;
 			end
 			
+			Ka=obj.Ka_eff(I);
 			
-            for i = 1:length(L)
-                if obj.z(i)<0
-                    L(i)=prod(Ka(obj.z>=obj.z(i) & obj.z<0));
-                else
-                    L(i)=prod(Ka(obj.z<=obj.z(i) & obj.z>=0).^(-1));
-                end
-            end
-        end
+			index_0=find(L==0);
+			L(index_0)=1;
+			
+			if index_0~=1
+				for i=(index_0-1):1
+					L(i)= L(i+1)*Ka(i);
+				end
+			end
+			
+			if index_0~=length(L)
+				for i=(index_0+1):length(L)
+					L(i)= L(i-1)/Ka(i-1);
+				end
+			end
+			
+		end
         
         function i_frac=ionization_fraction(obj, pH, I ,index)
         	% This function takes the ion and the pH and the ionic strength. 
@@ -223,14 +226,14 @@ classdef ion < handle
 			Ka=10.^(-obj.pKa);
 		end
 		
-		function z0=get_z0(obj)
+		function z0=z0(obj)
 			% Calls the list of charge states, but inserts 0 in the appropriate position. 
 			
 			z0=[0, obj.z];
 			z0=sort(z0);
 		end
 
-		function Ka_eff=get_Ka_eff(obj, I)
+		function Ka_eff=Ka_eff(obj, I)
 			% Uses the ionic strength correction function from
 			% Dubye-Huckle theory to calculate the activity coefficients, 
 			% and from this, compute the effective Ka values for the ion. 
@@ -248,7 +251,7 @@ classdef ion < handle
 			
 			% Call the list of charge states, including 0. 
 			% This is required b/c you need the activity of the uncharged species.
-            z_list=obj.get_z0;
+            z_list=obj.z0;
 			 
 			% There are two coefficients that are used repeatedly.
 			% Specified in Bahga. 
