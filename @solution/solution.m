@@ -73,6 +73,10 @@ classdef solution
 				obj.I=obj.calc_I(obj.pH);
 			end
 
+			effective_mobilities=obj.onsager_fuoss;
+			for i=1:length(obj.ions)
+				obj.ions{i}.fi_mobility_effective=effective_mobilities{i}
+			end
         end
 
 		function new_solution=add_ion(obj, new_ions, new_concentrations)
@@ -323,7 +327,7 @@ classdef solution
 			Cb=abs(c/(obj.pH-new_sol.pH));
 		end
 		
-		function [mob_new, factor]=onsager_fuoss(obj)
+		function [mobility]=onsager_fuoss(obj)
 			
 			% Initialize the empty variables that you will need.
 			% Omega = mobility / F / z
@@ -337,11 +341,9 @@ classdef solution
 			
 			%populate them.
 			for i=1:length(obj.ions)
-				for j=1:length(obj.ions{i}.z)
-					z_list=cat(1, z_list, obj.ions{i}.z(j));
-					omega=cat(1, omega, obj.ions{i}.fi_mobility(j)/obj.F/z_list(end));
-				end
-				conc_list=cat(1, conc_list, (obj.concentrations(i).*obj.ions{i}.ionization_fraction(obj.pH))');	
+				omega=cat(1, omega, obj.ions{i}.fi_mobility./obj.F./obj.ions{i}.z);
+				z_list=cat(1, z_list, obj.ions{i}.z);
+				conc_list=cat(1, conc_list, (obj.concentrations(i).*obj.ions{i}.ionization_fraction(obj.pH, obj.I))');	
 			end
 			
 			% Here is the mobility, which for some reason =mobility/F. 
@@ -349,11 +351,9 @@ classdef solution
 			
 			n_states=length(omega);
 			mob_new=zeros(1,n_states);
-
-    
+			
 			% mu is the (chemical?) potential of each ion.
 			mu=conc_list.*z_list.^2./obj.I/2; %total potential
-			
 			
 			for j=1:n_states
 			    for i=1:n_states
@@ -367,23 +367,27 @@ classdef solution
 			 
 		    B=2*h-II;
 			
-		    r(:,1)=(z_list-sum(z_list.*mu)/sum(mu.*abs(z_list)./mob)*(abs(z_list)./mob))'; %check for absolute signs 
+		    r(:,1) = (z_list-sum(z_list.*mu) / sum(mu.*abs(z_list)./mob) * (abs(z_list)./mob))'; %check for absolute signs 
 
 		    for i=2:6                                        
-		    r(:,i)=B*r(:,i-1);
+		    	r(:,i)=B*r(:,i-1);
 			end
 			
 			c=[0.2929 -0.3536 0.0884 -0.0442 0.0276 -0.0193];
 			%coefficients in onsager-fuoss paper
 
-		    factor=c*r';
-			factor=factor';
-		    mob_new=obj.F*omega-(obj.F*0.78420*z_list.*factor.*omega+31.410e-9).*sqrt(obj.I)./(1+1.5*sqrt(obj.I));
-			mob_new=(mob_new.*z_list)';
-			
-			
-		end
+		    factor=(c*r')';
+		    mob_new=omega-(0.78420*z_list.*factor.*omega+31.410e-9/obj.F).*sqrt(obj.I)./(1+1.5*sqrt(obj.I));
+			mob_new=(mob_new.*z_list*obj.F)';
 		
-        
+		
+		
+			index=1;
+			mobility=cell(1, length(obj.ions));
+			for i=1:length(obj.ions)
+				mobility{i}=mob_new(index:(index+length(obj.ions{i}.z)-1));
+				index=index+length(obj.ions{i}.z);
+			end
+		end
     end %End methods section
 end %End class definition
