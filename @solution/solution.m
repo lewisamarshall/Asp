@@ -1,4 +1,4 @@
-classdef solution < handle
+classdef solution
     % SOLUTION	Create a  SOLUTION object.
 	%
 	% 	SOLUTION(IONS, CONCENTRATIONS) is an object representing aqueous solution
