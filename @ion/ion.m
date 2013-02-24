@@ -130,7 +130,7 @@ classdef ion < handle
 			end
 			
 			% Get the vector of products of acidity constants.
-            L=obj.get_L(I);
+            L=obj.L(I);
 			% Compute the concentration of H+ from the pH.
             cH=10.^(-pH)';
             
