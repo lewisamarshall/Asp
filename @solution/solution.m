@@ -323,7 +323,7 @@ classdef solution
 			Cb=abs(c/(obj.pH-new_sol.pH));
 		end
 		
-		function [mob_new, factor]=get_factor(obj)
+		function [mob_new, factor]=onsager_fuoss(obj)
 			
 			% Initialize the empty variables that you will need.
 			% Omega = mobility / F / z
