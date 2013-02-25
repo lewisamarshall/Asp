@@ -79,3 +79,7 @@ function [pass]=ionization_fraction_test()
 		disp('Ionization test failed.')
 	end
 end
+
+function [pass]=Ka_test()
+	
+end
