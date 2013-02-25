@@ -10,13 +10,18 @@ function [mobility, omega, z_list, conc_list]=onsager_fuoss(obj)
 			
 	%All three share the same order
 			
-	%populate them.
+	% populate them.
 	for i=1:length(obj.ions)
 		omega=cat(2, omega, (obj.ions{i}.fi_mobility./obj.F./obj.ions{i}.z));
 		z_list=cat(2, z_list, (obj.ions{i}.z));
 		conc_list=cat(2, conc_list, (obj.concentrations(i).*obj.ions{i}.ionization_fraction(obj.pH, obj.I)));	
 	end
-
+	
+	% add H+ and OH- ions
+	omega=cat(2, omega, [obj.H.fi_mobility, obj.OH.fi_mobility]./obj.F./[1, -1]); 
+	z_list=cat(2, z_list, [1, -1]);
+	conc_list=cat(2, conc_list, [obj.cH, obj.cOH]);
+	
 	n_states=length(omega);
 	
 	% potential is the (chemical?) potential of each ion.
@@ -55,9 +60,11 @@ function [mobility, omega, z_list, conc_list]=onsager_fuoss(obj)
 	% split the new mobility values into cells that match the
 	% molecules
 	index=1;
-	mobility=cell(1, length(obj.ions));
+	mobility=cell(1, length(obj.ions)+1);
 	for i=1:length(obj.ions)
 		mobility{i}=mob_new(index:(index+length(obj.ions{i}.z)-1));
 		index=index+length(obj.ions{i}.z);
 	end
+	mobility{end}=mob_new(i:end);
+
 end

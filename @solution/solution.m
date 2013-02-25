@@ -12,7 +12,7 @@ classdef solution
 	% 	See also ion.
     
     properties(Constant = true, GetAccess = 'private')
-        F=9.65E4;           % Faraday's const.				[C/mol]
+        F=96485.3415;       % Faraday's const.				[C/mol]
         Rmu=8.31;           % Universal gas const. 			[J/mol*K]
         Temp=298;           % Temperature 					[K]
         Kw=1E-14;           % Water equilibrium constant	[mol^2]
@@ -21,11 +21,13 @@ classdef solution
         Lpm3=1000;          % Liters per meter^3			[]
         visc=1E-3;          % Dynamic viscosity (water) 	[Pa s]
 		Adh=0.512; 			% L^1/2 / mol^1/2, approximate for room temperature
-		aD=1.5*sqrt(2); 	% mol^-1/2 mol^-3/2, approximation
-		H=ion('H+', +1, 100, 362E-9);
-		OH=ion('OH-', -1, -100, 205E-9);
+		aD=1.5;			 	% mol^-1/2 mol^-3/2, approximation
     end
     
+    properties(Constant = false, GetAccess = 'private')
+		H=ion('H+', +1, 100, 362E-9);
+		OH=ion('OH-', -1, -100, -205E-9);
+	end
     properties
         ions;				% Must be a cell of ion objects from the Asp class. 
         concentrations=0; 	% A vector of concentrations in molar.
@@ -79,6 +81,9 @@ classdef solution
 			for i=1:length(obj.ions)
 				obj.ions{i}.fi_mobility_effective=effective_mobilities{i};
 			end
+			obj.H.fi_mobility_effective=effective_mobilities{end}(1);
+			obj.OH.fi_mobility_effective=effective_mobilities{end}(2);
+			
         end
 
 		function new_solution=add_ion(obj, new_ions, new_concentrations)
@@ -117,13 +122,13 @@ classdef solution
 		function H_conductivity=H_conductivity(obj)
 			% Calculates teh conductivity of H+.
 			% Does not correct the mobility of the ion.
-			H_conductivity=obj.F*obj.muH*obj.cH*obj.Lpm3;
+			H_conductivity=obj.cH*obj.H.molar_conductivity(obj.pH, obj.I);
 		end
 		
 		function OH_conductivity=OH_conductivity(obj)
 			% Calculates teh conductivity of OH+.
 			% Does not correct the mobility of the ion.
-			OH_conductivity=obj.F*obj.muOH*obj.cOH*obj.Lpm3;
+			OH_conductivity=obj.cOH*obj.OH.molar_conductivity(obj.pH, obj.I);
 		end
         
     end %End methods section

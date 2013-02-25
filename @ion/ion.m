@@ -20,12 +20,12 @@ classdef ion
 	% Eventually, T may be  removed from the constants list.
 	
     properties(Constant = true, GetAccess = 'private')
-        F=9.6485E4;       	% Faraday's const.[C/mol]
+        F=96485.3415;       % Faraday's const.[C/mol]
         Lpm3=1000;			% Conversion from liters to m^3
 		T=298;				% Temperature, in Kalvin
 		% The following are constants in eqtn 6 of Bahga 2010. 
 		Adh=0.5102; 		% L^1/2 / mol^1/2, approximate for room temperature
-		aD=1.5*sqrt(2); 	% mol^-1/2 mol^-3/2, approximation
+		aD=1.5; 	% mol^-1/2 mol^-3/2, approximation
     end
     
     methods
