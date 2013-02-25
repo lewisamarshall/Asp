@@ -52,33 +52,30 @@ function pH=calc_pH(obj, I)
         Pi=conv([0 1],Pi);  % Convolve with P2
         PMat(i,:)=Pi;
     end %for i
-            
-            
+
+	% Multiply P matrix by concentrations, and sum.
+	C=repmat(obj.concentrations', 1, size(PMat, 2));
+	P=sum(PMat.*C, 1);
+	
     %Pad whichever is smaller, P or Q            
     SizeDiff=size(Q,2)-size(PMat,2);
     if SizeDiff>0
-        PMat=[PMat,repmat(PMat(:,1)*0,1,SizeDiff)];
+        P=[P,repmat(0,1,SizeDiff)];
     elseif SizeDiff<0
         Q=[Q,repmat(0,1,SizeDiff)];
     end
                  
-	% Construct Polynomial
-	% rewrite using repmat
-    cTotRep=(obj.concentrations)'*ones(1,size(PMat,2));
-
-    P=sum(cTotRep.*PMat,1);
-            
+	% Construct polynomial.
     Poly=zeros(1,max(length(P), length(Q)));
     Poly(1:length(P))=Poly(1:length(P))+P;
     Poly(1:length(Q))=Poly(1:length(Q))+Q; %from QMat
             
     Poly=fliplr(Poly);
             
-    %%%
-    % Solve Polynomial for concentration (should work)
-    %%%
+    % Solve Polynomial for concentration
     roo=roots(Poly);
     cH=roo(imag(roo)==0 & roo>0);
 	
+	% Convert to pH. Use the activity to calculate properly.
     pH=-log10(cH*obj.H.activity_coefficient(I,1));
 end
