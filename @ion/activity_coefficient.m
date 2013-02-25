@@ -10,6 +10,6 @@ function gamma=activity_coefficient(obj, I, z)
 			
 	% Use them to calculate the activity coefficients. 
 	% These coefficients are for z=+-1, for H+ and OH-
-	gamma=z_list.^2*(B-A);
-	gamma=10^gamma;
+	gamma=z.^2*(B-A);
+	gamma=10.^gamma;
 end

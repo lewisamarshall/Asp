@@ -108,9 +108,16 @@ classdef ion
 			end		
         end
 
-		function Ka=Ka(obj)
+		function Ka=Ka(obj, index)
 			% Calculates the Kas from the pKas. 
 			Ka=10.^(-obj.pKa);
+			if exist('index', 'var')
+				try
+					Ka=Ka(index);
+				catch
+					disp('Index is out of bound. Returning all acidity coefficients.')
+				end
+			end
 		end
 		
 		function z0=z0(obj)

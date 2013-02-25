@@ -12,8 +12,8 @@ function Ka_eff=Ka_eff(obj, I)
 	% Make the effective Ka vector the same size as the Ka vector.
 	Ka_eff=obj.Ka;
 			
-	gam_i=obj.activity_coefficient(I)
-	gam_h=obj.activity_coefficient(I, 1)
+	gam_i=obj.activity_coefficient(I);
+	gam_h=obj.activity_coefficient(I, 1);
 			
 	% For each acidity coefficient, get the effective 
 	% coefficienty by multiplying by activities.
