@@ -22,6 +22,8 @@ classdef solution
         visc=1E-3;          % Dynamic viscosity (water) 	[Pa s]
 		Adh=0.512; 			% L^1/2 / mol^1/2, approximate for room temperature
 		aD=1.5*sqrt(2); 	% mol^-1/2 mol^-3/2, approximation
+		H=ion('H+', +1, 100, 362E-9);
+		OH=ion('OH-', -1, -100, 205E-9);
     end
     
     properties

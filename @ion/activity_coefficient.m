@@ -1,6 +1,6 @@
-function gam_h=activity_coefficient_h(obj, I)
-	if ~exist('I', 'var')
-		I=obj.I;
+function gamma=activity_coefficient(obj, I, z)
+	if ~exist('z', 'var')
+		z=obj.z0;
 	end
 			
 	% There are two coefficients that are used repeatedly.
@@ -10,6 +10,6 @@ function gam_h=activity_coefficient_h(obj, I)
 			
 	% Use them to calculate the activity coefficients. 
 	% These coefficients are for z=+-1, for H+ and OH-
-	gam_h=B-A;
-	gam_h=10^gam_h;
+	gamma=z_list.^2*(B-A);
+	gamma=10^gamma;
 end
