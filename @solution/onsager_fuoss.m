@@ -17,14 +17,10 @@ function [mobility]=onsager_fuoss(obj)
 		conc_list=cat(1, conc_list, (obj.concentrations(i).*obj.ions{i}.ionization_fraction(obj.pH, obj.I))');	
 	end
 
-	
-	% Here is the mobility, which for some reason =mobility/F. 
-	mob=omega.*abs(z_list);
-			
 	n_states=length(omega);
-			
+	
 	% potential is the (chemical?) potential of each ion.
-	potential=conc_list.*z_list.^2./obj.I/2; %total potential
+	potential=conc_list.*z_list.^2./obj.I/2; 
 	
 	% initialize and populate the h matrix. 
     h=zeros(n_states);
@@ -39,6 +35,9 @@ function [mobility]=onsager_fuoss(obj)
 	II=eye(n_states);
 			 
     B=2*h-II;
+			
+	% Here is the mobility, which for some reason =mobility/F. 
+	mob=omega.*abs(z_list);
 			
     r(:,1) = (z_list-sum(z_list.*potential) / sum(potential.*abs(z_list)./mob) * (abs(z_list)./mob))'; %check for absolute signs 
 
