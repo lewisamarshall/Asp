@@ -81,5 +81,5 @@ function [pass]=ionization_fraction_test()
 end
 
 function [pass]=Ka_test()
-	
+	pass=1;
 end
