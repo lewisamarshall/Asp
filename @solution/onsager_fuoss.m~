@@ -22,24 +22,23 @@ function [mobility]=onsager_fuoss(obj)
 			
 	n_states=length(omega);
 			
-	% potential is the (chemical?) potential of each ion.
-	potential=conc_list.*z_list.^2./obj.I/2; %total potential
+	% mu is the (chemical?) potential of each ion.
+	mu=conc_list.*z_list.^2./obj.I/2; %total potential
 	
-	% initialize and populate the h matrix. 
     h=zeros(n_states);
 	for j=1:n_states
 	    for i=1:n_states
-	   	h(j,i)=potential(i)*omega(i)/(omega(i)+omega(j));
+	   	h(j,i)=mu(i)*omega(i)/(omega(i)+omega(j));
 	    end
 	end
-	
-	d=diag(sum(h,2));
+	d=sum(h,2);
+	d=diag(d);
 	h=h+d;
-	II=eye(n_states);
+	II=eye(n_states,n_states);
 			 
     B=2*h-II;
 			
-    r(:,1) = (z_list-sum(z_list.*potential) / sum(potential.*abs(z_list)./mob) * (abs(z_list)./mob))'; %check for absolute signs 
+    r(:,1) = (z_list-sum(z_list.*mu) / sum(mu.*abs(z_list)./mob) * (abs(z_list)./mob))'; %check for absolute signs 
 
     for i=2:6                                        
     	r(:,i)=B*r(:,i-1);

@@ -15,7 +15,7 @@ function L=L(obj, I)
 	L(index_0)=1;
 			
 	if index_0~=1
-		for i=(index_0-1):1
+		for i=(index_0-1):-1:1
 			L(i)= L(i+1)*Ka(i);
 		end
 	end

@@ -41,7 +41,7 @@ classdef ion
                 end
 				
                 % Check that z is a vector of integers
-                if z==int8(z) && isvector(z)
+                if all(z==int8(z)) && isvector(z)
                     obj.z=double(z);
                 else
                     error('Charge states must be a vector of integers.')
