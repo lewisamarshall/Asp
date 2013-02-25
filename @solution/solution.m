@@ -93,7 +93,7 @@ classdef solution
 				pH=obj.pH;
 			end
 			
-			cH=10^(-pH);
+			cH=10^(-pH)/obj.activity_coefficient_h;
 		end
 		
 		function cOH=cOH(obj, pH, I)

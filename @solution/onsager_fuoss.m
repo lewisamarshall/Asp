@@ -51,7 +51,9 @@ function [mobility, omega, z_list, conc_list]=onsager_fuoss(obj)
 	mob_new=obj.F*omega-(A_prime  *z_list.*factor.*omega+B_prime).*sqrt(obj.I)./(1+1.5*sqrt(obj.I));
 
 	mob_new=(mob_new.*z_list);
-		
+	
+	% split the new mobility values into cells that match the
+	% molecules
 	index=1;
 	mobility=cell(1, length(obj.ions));
 	for i=1:length(obj.ions)
