@@ -12,11 +12,12 @@ function [mobility]=onsager_fuoss(obj)
 			
 	%populate them.
 	for i=1:length(obj.ions)
-		omega=cat(1, omega, obj.ions{i}.fi_mobility./obj.F./obj.ions{i}.z);
-		z_list=cat(1, z_list, obj.ions{i}.z);
+		omega=cat(1, omega, (obj.ions{i}.fi_mobility./obj.F./obj.ions{i}.z)');
+		z_list=cat(1, z_list, (obj.ions{i}.z)');
 		conc_list=cat(1, conc_list, (obj.concentrations(i).*obj.ions{i}.ionization_fraction(obj.pH, obj.I))');	
 	end
-			
+
+	
 	% Here is the mobility, which for some reason =mobility/F. 
 	mob=omega.*abs(z_list);
 			

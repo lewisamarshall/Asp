@@ -28,8 +28,7 @@ function i_frac=ionization_fraction(obj, pH, I ,index)
     i_frac_denom=sum(L.*bsxfun(@power, cH, obj.z0),2);
             
 	%Calculate the vector of ionization fractions
-    i_frac=L.*bsxfun(@power,  ...
-    cH, obj.z)./i_frac_denom;
+    i_frac=L.*bsxfun(@power,  cH, obj.z0)./i_frac_denom;
 	i_frac=i_frac(obj.z0~=0);
 	% If index is specified, return only the ionization fraction of z(i).
 	if exist('index', 'var')
