@@ -89,13 +89,17 @@ classdef solution
 			new_solution=solution(cat(2, obj.ions, {new_ions}), cat(2, obj.concentrations, new_concentrations));
 		end
 				
-		function cH=cH(obj, pH)
+		function cH=cH(obj, pH, I)
 			% Supplies the concentration of H+ in the solution.
 			if  ~exist('pH', 'var')
 				pH=obj.pH;
 			end
 			
-			cH=10^(-pH)/obj.activity_coefficient_h;
+			if  ~exist('I', 'var')
+				I=obj.I;
+			end
+			
+			cH=10^(-pH)/obj.H.activity_coefficient(I, 1);
 		end
 		
 		function cOH=cOH(obj, pH, I)

@@ -80,6 +80,5 @@ function pH=calc_pH(obj, I)
     roo=roots(Poly);
     cH=roo(imag(roo)==0 & roo>0);
 	
-	gam_h=obj.activity_coefficient_h(I);
-    pH=-log10(cH*obj.H.activity_coefficient(I));
+    pH=-log10(cH*obj.H.activity_coefficient(I,1));
 end
