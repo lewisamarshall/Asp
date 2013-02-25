@@ -22,7 +22,7 @@ function i_frac=ionization_fraction(obj, pH, I ,index)
 	% Get the vector of products of acidity constants.
     L=obj.L(I);
 	% Compute the concentration of H+ from the pH.
-    cH=10.^(-pH)';
+    cH=10.^(-pH)/obj.activity_coefficient(I,1);
             
 	% Calculate the denominator of the function for ionization fraction.
     i_frac_denom=sum(L.*bsxfun(@power, cH, obj.z0),2);
