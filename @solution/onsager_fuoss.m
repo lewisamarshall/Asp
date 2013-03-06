@@ -37,7 +37,7 @@ function [mobility, omega, z_list, conc_list]=onsager_fuoss(obj)
 			end
 	    end
 	end
-	h
+
 	d=diag(sum(h,2));
     B=2*(h+d)-eye(n_states);
 
