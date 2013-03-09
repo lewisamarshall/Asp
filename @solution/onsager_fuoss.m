@@ -12,13 +12,13 @@ function [mobility, omega, z_list, conc_list]=onsager_fuoss(obj)
 			
 	% populate them.
 	for i=1:length(obj.ions)
-		omega=cat(2, omega, (obj.ions{i}.fi_mobility./obj.F./obj.ions{i}.z));
+		omega=cat(2, omega, (obj.ions{i}.absolute_mobility./obj.F./obj.ions{i}.z));
 		z_list=cat(2, z_list, (obj.ions{i}.z));
 		conc_list=cat(2, conc_list, (obj.concentrations(i).*obj.ions{i}.ionization_fraction(obj.pH, obj.I)));	
 	end
 	
 	% add H+ and OH- ions
-	omega=cat(2, omega, [obj.H.fi_mobility, obj.OH.fi_mobility]./obj.F./[1, -1]); 
+	omega=cat(2, omega, [obj.H.absolute_mobility, obj.OH.absolute_mobility]./obj.F./[1, -1]); 
 	z_list=cat(2, z_list, [1, -1]);
 	conc_list=cat(2, conc_list, [obj.cH, obj.cOH]);
 	

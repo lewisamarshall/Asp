@@ -1,3 +1,3 @@
-function []=solution_tests.m
-	
+function []=solution_tests()
+	disp('No tests.')
 end

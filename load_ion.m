@@ -4,7 +4,6 @@ function [loaded_ion]=load_ion(ion_name)
 	% Database derived from Peakmaster.
 	
 	load database.mat
-	Z=[-3:-1, 1:3];
 	N=find(strcmpi(ion_name, NAME));
 	
 	if isempty(N)
@@ -15,5 +14,5 @@ function [loaded_ion]=load_ion(ion_name)
 	loaded_ion=ion( NAME{N},...
 		Z(indices),...
 		PKA(N, indices),...
-		MOBILITY(N, indices).*1e-9);
+		MOBILITY(N, indices).*1e-9.*Z(indices));
 end

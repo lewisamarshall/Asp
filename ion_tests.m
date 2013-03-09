@@ -19,7 +19,7 @@ function[pass]=initialization_test()
 		TRIS=ion('Tris', 1, 8.076, 29.5e-9);
 		CL=ion('Chloride', -1, -2, -79.1e-9);
 		ASCORBIC=ion('Ascorbic Acid', [-1, -2],[4.25, 10.5], [25.5e-9, 51e-9]);
-		if ~all(ASCORBIC.fi_mobility==(-[51e-9, 25.5e-9]))
+		if ~all(ASCORBIC.absolute_mobility==(-[51e-9, 25.5e-9]))
 			disp('Mobilities not corrected properly.')
 			error('Wrong mobilities.')
 		end

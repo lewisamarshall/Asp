@@ -5,14 +5,14 @@ classdef ion
 	
 	% The ion is defined by a name, and a set of charge states (z).
 	% Each charge state must have an associated acidity constant (pKa).
-	% Each charge state must have an associated fully ionized mobility (fi_mobility).
+	% Each charge state must have an associated fully ionized mobility (absolute_mobility).
 	
     properties
         name;
         z=0;
         pKa;
-        fi_mobility; %Expected in m^2/V/s.  
-		fi_mobility_effective; %Intended to be filled by the solution class.
+        absolute_mobility; %Expected in m^2/V/s.  
+		actual_mobility; %Intended to be filled by the solution class.
     end
     
 	% Properties only accessible by the funciton itself. 
@@ -29,7 +29,7 @@ classdef ion
     end
     
     methods
-        function obj=ion(name, z, pKa, fi_mobility)
+        function obj=ion(name, z, pKa, absolute_mobility)
 			%Class constructor. 
             %Initialize the object, with checks on the form of the variables.
             if(nargin ==4 ) %
@@ -48,15 +48,15 @@ classdef ion
                 end
                 
 				% Check that the pKa is a vector of numbers of the same length as z. 
-                if isvector(pKa) && length(obj.z)==length(pKa) &&isnumeric(fi_mobility)
+                if isvector(pKa) && length(obj.z)==length(pKa) &&isnumeric(absolute_mobility)
                     obj.pKa=double(pKa);
                 else
                     error ('pKas must be a numeric vector the same size as charge vector.')
                 end
                 
 				%Check that the fully ionized mobility is a vector of numbers the same size as z. 
-                if isvector(fi_mobility) && length(obj.z)==length(fi_mobility) && isnumeric(fi_mobility)
-                    obj.fi_mobility=double(fi_mobility);
+                if isvector(absolute_mobility) && length(obj.z)==length(absolute_mobility) && isnumeric(absolute_mobility)
+                    obj.absolute_mobility=double(absolute_mobility);
                 else
                     error ('Fully ionized mobilities must be a numeric vector the same size as charge vector.')
                 end
@@ -64,8 +64,8 @@ classdef ion
 				% Force the sign of the fully ionized mobilities to match the sign of the charge. 
 				% This command provides a warning, which you can suppress, with, for example, 
 				% warning('off','all');
-                if ~all(sign(obj.z)==sign(obj.fi_mobility))
-                    obj.fi_mobility=abs(obj.fi_mobility).*double(sign(obj.z));
+                if ~all(sign(obj.z)==sign(obj.absolute_mobility))
+                    obj.absolute_mobility=abs(obj.absolute_mobility).*double(sign(obj.z));
                     warning('Forcing fully ionized mobility signs to match charge signs.')
                 end
                 
@@ -89,7 +89,7 @@ classdef ion
 			% Sort the pKas by the stored index order.
          	obj.pKa=obj.pKa(Index);
 			% Sort the mobilities by the stored index order.
-            obj.fi_mobility=obj.fi_mobility(Index);
+            obj.absolute_mobility=obj.absolute_mobility(Index);
 			
 			% This section will check each charge state to see if it is complete.
 			% That is, if there is a charge state -2, there must be a charge state

@@ -77,12 +77,12 @@ classdef solution
 				obj.I=obj.calc_I(obj.pH);
 			end
 
-			effective_mobilities=obj.onsager_fuoss;
+			actual_mobilities=obj.onsager_fuoss;
 			for i=1:length(obj.ions)
-				obj.ions{i}.fi_mobility_effective=effective_mobilities{i};
+				obj.ions{i}.actual_mobility=actual_mobilities{i};
 			end
-			obj.H.fi_mobility_effective=effective_mobilities{end}(1);
-			obj.OH.fi_mobility_effective=effective_mobilities{end}(2);
+			obj.H.actual_mobility=actual_mobilities{end}(1);
+			obj.OH.actual_mobility=actual_mobilities{end}(2);
 			
         end
 

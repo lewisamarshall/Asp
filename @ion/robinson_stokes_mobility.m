@@ -1,4 +1,4 @@
-function fi_mobility_effective=robinson_stokes_mobility(obj, I)
+function actual_mobility=robinson_stokes_mobility(obj, I)
 	% If only an ionic strength is specified, use the Robinson-Stokes 
 	% correction to calculate a new fully ionized mobility. 
 			
@@ -10,7 +10,7 @@ function fi_mobility_effective=robinson_stokes_mobility(obj, I)
 		% Likely typo in paper. 
 		A=0.2297;
 		B=31.410e-9;
-		fi_mobility_effective=obj.fi_mobility-(A.*obj.fi_mobility+B.*sign(obj.z))*sqrt(I)/(1+obj.aD*sqrt(I));
+		actual_mobility=obj.absolute_mobility-(A.*obj.absolute_mobility+B.*sign(obj.z))*sqrt(I)/(1+obj.aD*sqrt(I));
 				
 	else
 		error('Ionic strength must be specified as a scalar positive value.')
