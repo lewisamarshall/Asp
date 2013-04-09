@@ -15,6 +15,6 @@ function m_conductivity=molar_conductivity(obj, pH, I)
 			
     i_frac=ionization_fraction(obj, pH, I);
             
-    m_conductivity=sum(obj.F*obj.z.*i_frac.*absolute_mobility*obj.Lpm3);
+    m_conductivity=sum(obj.F*obj.z.*i_frac.*actual_mobility*obj.Lpm3);
             
 end
