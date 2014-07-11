@@ -16,7 +16,7 @@ function pH=calc_pH(obj, I)
 	% size of the list of charge states in an ion. 
     MaxCol=-inf;
     for i=1:length(obj.concentrations)
-        MaxCol=max(MaxCol, max(obj.ions{i}.z)-min(obj.ions{i}.z)+1);
+        MaxCol=max(MaxCol, max(obj.ions{i}.z)-min(obj.ions{i}.z)+2);
     end
             
 	% Set up the matrix of Ls, the multiplication
@@ -26,7 +26,7 @@ function pH=calc_pH(obj, I)
     for i=1:length(obj.ions)
         LMat(i,1:length(obj.ions{i}.z)+1)=obj.ions{i}.L(I);
     end
-                    
+             
     % Construct Q vector.
 	Q=1;
 	% Convolve each line of the L matrix. 
